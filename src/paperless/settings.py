@@ -212,7 +212,7 @@ OCR_THREADS = os.getenv("PAPERLESS_OCR_THREADS")
 # If this is true, any failed attempts to OCR a PDF will result in the PDF
 # being indexed anyway, with whatever we could get.  If it's False, the file
 # will simply be left in the CONSUMPTION_DIR.
-FORGIVING_OCR = bool(os.getenv("PAPERLESS_FORGIVING_OCR", "YES").lower() in ("yes", "y", "1", "t", "true"))
+FORGIVING_OCR = bool(os.getenv("PAPERLESS_FORGIVING_OCR", "YES").lower() in ("yes", "y", "1", "t", "true"))  # NOQA
 
 # GNUPG needs a home directory for some reason
 GNUPG_HOME = os.getenv("HOME", "/tmp")
@@ -237,6 +237,14 @@ CONSUMPTION_DIR = os.getenv("PAPERLESS_CONSUMPTION_DIR")
 # slowly, you may want to use a higher value than the default.
 CONSUMER_LOOP_TIME = int(os.getenv("PAPERLESS_CONSUMER_LOOP_TIME", 10))
 
+# By default, Paperless will attempt to encrypt your PDF files using the
+# PASSPHRASE specified below.  If however you're not concerned about encrypting
+# these files (for example if you have disk encryption locally) then you don't
+# need this and can safely turn it off by setting `DISABLE_ENCRYPTION=true` in
+# your environment.  In such a case, you need not set PASSPHRASE below as it
+# will be ignored anyway.
+ENABLE_ENCRYPTION = os.getenv("DISABLE_ENCRYPTION", "").lower() != "true"
+
 # This is used to encrypt the original documents and decrypt them later when
 # you want to download them.  Set it and change the permissions on this file to
 # 0600, or set it to `None` and you'll be prompted for the passphrase at
@@ -245,7 +253,6 @@ CONSUMER_LOOP_TIME = int(os.getenv("PAPERLESS_CONSUMER_LOOP_TIME", 10))
 # with GPG, including an interesting case where it may "encrypt" zero-byte
 # files.
 PASSPHRASE = os.getenv("PAPERLESS_PASSPHRASE")
-ENABLE_ENCRYPTION = os.getenv('DISABLE_ENCRYPTION') != 'true'
 
 # Trigger a script after every successful document consumption?
 PRE_CONSUME_SCRIPT = os.getenv("PAPERLESS_PRE_CONSUME_SCRIPT")

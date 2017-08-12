@@ -30,14 +30,7 @@ from .serialisers import (
 
 
 class IndexView(TemplateView):
-
     template_name = "documents/index.html"
-
-    def get_context_data(self, **kwargs):
-        print(kwargs)
-        print(self.request.GET)
-        print(self.request.POST)
-        return TemplateView.get_context_data(self, **kwargs)
 
 
 class FetchView(SessionOrBasicAuthMixin, DetailView):
@@ -59,18 +52,23 @@ class FetchView(SessionOrBasicAuthMixin, DetailView):
 
         if self.kwargs["kind"] == "thumb":
             return HttpResponse(
-                GnuPG.decrypted(self.object.thumbnail_file),
+                self._get_raw_data(self.object.thumbnail_file),
                 content_type=content_types[Document.TYPE_PNG]
             )
 
         response = HttpResponse(
-            GnuPG.decrypted(self.object.source_file),
+            self._get_raw_data(self.object.source_file),
             content_type=content_types[self.object.file_type]
         )
         response["Content-Disposition"] = 'attachment; filename="{}"'.format(
             self.object.file_name)
 
         return response
+
+    def _get_raw_data(self, file_handle):
+        if self.object.storage_type == Document.STORAGE_TYPE_UNENCRYPTED:
+            return file_handle
+        return GnuPG.decrypted(file_handle)
 
 
 class PushView(SessionOrBasicAuthMixin, FormView):

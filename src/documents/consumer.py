@@ -185,6 +185,10 @@ class Consumer(object):
         created = file_info.created or timezone.make_aware(
                     datetime.datetime.fromtimestamp(stats.st_mtime))
 
+        storage_type = Document.STORAGE_TYPE_GPG
+        if not settings.ENABLE_ENCRYPTION:
+            storage_type = Document.STORAGE_TYPE_UNENCRYPTED
+
         with open(doc, "rb") as f:
             document = Document.objects.create(
                 correspondent=file_info.correspondent,
@@ -193,7 +197,8 @@ class Consumer(object):
                 file_type=file_info.extension,
                 checksum=hashlib.md5(f.read()).hexdigest(),
                 created=created,
-                modified=created
+                modified=created,
+                storage_type=storage_type
             )
 
         relevant_tags = set(list(Tag.match_all(text)) + list(file_info.tags))
@@ -202,21 +207,21 @@ class Consumer(object):
             self.log("debug", "Tagging with {}".format(tag_names))
             document.tags.add(*relevant_tags)
 
-        # Encrypt and store the actual document
-        with open(doc, "rb") as unencrypted:
-            with open(document.source_path, "wb") as encrypted:
-                self.log("debug", "Encrypting the document")
-                encrypted.write(GnuPG.encrypted(unencrypted))
-
-        # Encrypt and store the thumbnail
-        with open(thumbnail, "rb") as unencrypted:
-            with open(document.thumbnail_path, "wb") as encrypted:
-                self.log("debug", "Encrypting the thumbnail")
-                encrypted.write(GnuPG.encrypted(unencrypted))
+        self._write(document, doc, document.source_path)
+        self._write(document, thumbnail, document.thumbnail_path)
 
         self.log("info", "Completed")
 
         return document
+
+    def _write(self, document, source, target):
+        with open(source, "rb") as read_file:
+            with open(target, "wb") as write_file:
+                if document.storage_type == Document.STORAGE_TYPE_UNENCRYPTED:
+                    write_file.write(read_file.read())
+                    return
+                self.log("debug", "Encrypting the thumbnail")
+                write_file.write(GnuPG.encrypted(read_file))
 
     def _cleanup_doc(self, doc):
         self.log("debug", "Deleting document {}".format(doc))
